@@ -34,11 +34,27 @@ class Scheduler {
 
     // SelfTest for scheduler is implemented in class Thread
 
+    //------------------------------MP3----------------------------//
+    void updateLevel(List<Thread*>* list, int level);
+    void updateLevels();
+    Thread* popQueue(Thread* t, List<Thread*>* poplist, int level);
+    void pushQueue(Thread* t, List<Thread*>* pushlist, int level);
+    bool isL1Empty() { return L1->IsEmpty(); }
+    bool isL2Empty() { return L2->IsEmpty(); }
+    List<Thread*>* getL1() { return L1; }
+    //------------------------------MP3----------------------------//
+
    private:
-    List<Thread*>* readyList;  // queue of threads that are ready to run,
+    //List<Thread*>* readyList;  // queue of threads that are ready to run,
                                // but not running
     Thread* toBeDestroyed;     // finishing thread to be destroyed
                                // by the next thread that runs
+
+    //------------------------------MP3----------------------------//
+    List<Thread*>* L1;
+    List<Thread*>* L2;
+    List<Thread*>* L3;
+    //------------------------------MP3----------------------------//
 };
 
 #endif  // SCHEDULER_H

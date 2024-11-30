@@ -112,7 +112,7 @@ ifeq ($(hosttype),unknown)
 PROGRAMS = unknownhost
 else
 # change this if you create a new test program!
-PROGRAMS = consoleIO_test1 consoleIO_test2 consoleIO_test3
+PROGRAMS = consoleIO_test1 consoleIO_test2 consoleIO_test3 hw3t4
 endif
 
 all: $(PROGRAMS)
@@ -217,6 +217,12 @@ hw3t3.o: hw3t3.c
 hw3t3: hw3t3.o start.o
 	$(LD) $(LDFLAGS) start.o hw3t3.o -o hw3t3.coff
 	$(COFF2NOFF) hw3t3.coff hw3t3
+
+hw3t4.o: hw3t4.c
+	$(CC) $(CFLAGS) -c hw3t4.c
+hw3t4: hw3t4.o start.o
+	$(LD) $(LDFLAGS) start.o hw3t4.o -o hw3t4.coff
+	$(COFF2NOFF) hw3t4.coff hw3t4
 
 hw4t1.o: hw4t1.c
 	$(CC) $(CFLAGS) -c hw4t1.c

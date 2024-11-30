@@ -47,7 +47,40 @@ void Alarm::CallBack() {
     Interrupt *interrupt = kernel->interrupt;
     MachineStatus status = interrupt->getStatus();
 
+    //---------------------------MP3-------------------------------//
+    kernel->scheduler->updateLevels();
     if (status != IdleMode) {
-        interrupt->YieldOnReturn();
+        Thread *t = kernel->currentThread;
+        int level = t->getLevel();
+        double RunningTicks = (double)kernel->stats->totalTicks - t->getStartRunningTick();
+
+        if (level==1) {
+            ListIterator<Thread*> iter(kernel->scheduler->getL1());
+
+            while(!iter.IsDone()) { 
+                Thread* thread = iter.Item();
+                if (thread->getRemainingBurstTicks() < t->getRemainingBurstTicks()) {
+                    interrupt->YieldOnReturn();
+                    break;
+                }
+                if (thread->getRemainingBurstTicks() == t->getRemainingBurstTicks()) {
+                    if (thread->getID() < t->getID()) interrupt->YieldOnReturn();
+                    break;
+                }
+                iter.Next();
+            }
+        }
+
+        if (level==2 && !kernel->scheduler->isL1Empty()) {
+            interrupt->YieldOnReturn();
+        } 
+        if (level==3){
+            if (!kernel->scheduler->isL1Empty() || !kernel->scheduler->isL2Empty())
+                interrupt->YieldOnReturn();
+            //cout << "Running Ticks = " << RunningTicks << endl;
+            if (RunningTicks >= t->getTQ()) interrupt->YieldOnReturn();
+        }
+
     }
+    //---------------------------MP3-------------------------------//
 }

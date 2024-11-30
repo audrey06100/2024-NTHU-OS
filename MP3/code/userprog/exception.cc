@@ -128,7 +128,7 @@ void ExceptionHandler(ExceptionType which) {
                     return;
                     ASSERTNOTREACHED();
                     break;
-                case SC_Exit:
+                case SC_Exit:                                                                                                   
                     DEBUG(dbgAddr, "Program exit\n");
                     val = kernel->machine->ReadRegister(4);
                     cout << "return value:" << val << endl;

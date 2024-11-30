@@ -31,8 +31,13 @@
 //----------------------------------------------------------------------
 
 Scheduler::Scheduler() {
-    readyList = new List<Thread *>;
+    //readyList = new List<Thread *>;
     toBeDestroyed = NULL;
+
+    //MP3
+    L1 = new List<Thread *>;
+    L2 = new List<Thread *>;
+    L3 = new List<Thread *>;
 }
 
 //----------------------------------------------------------------------
@@ -41,8 +46,56 @@ Scheduler::Scheduler() {
 //----------------------------------------------------------------------
 
 Scheduler::~Scheduler() {
-    delete readyList;
+    //delete readyList;
+
+    //MP3
+    delete L1;
+    delete L2;
+    delete L3;
 }
+
+//------------------------------MP3----------------------------//
+void Scheduler::updateLevel(List<Thread*>* list, int level){
+
+    ListIterator<Thread*> iter(list); //iter points at the first thread.
+    
+    while(!iter.IsDone()) {
+        Thread* thread = iter.Item();
+        
+        thread->updatePriority();
+        int priority = thread->getPriority();
+        if(level == 3 && priority > thread->MaxPriority[2]){
+            popQueue(thread, L3, 3);
+            pushQueue(thread, L2, 2);
+        }
+        else if(level == 2 && priority > thread->MaxPriority[1]) {
+            popQueue(thread, L2, 2);
+            pushQueue(thread, L1, 1);
+        }
+        iter.Next();
+    }
+}
+
+void Scheduler::updateLevels() {
+    
+    updateLevel(L1, 1);
+    updateLevel(L2, 2);
+    updateLevel(L3, 3);
+}
+
+Thread* Scheduler::popQueue(Thread* t, List<Thread*>* poplist, int level) {
+    DEBUG(dbgSche, "[B] Tick [" << kernel->stats->totalTicks << "]: Thread ["
+        << t->getID() << "] is removed from queue L[" << level << "]");
+    poplist->Remove(t);
+    return t;
+}
+
+void Scheduler::pushQueue(Thread* t, List<Thread*>* pushlist, int level) {
+    DEBUG(dbgSche, "[A] Tick [" << kernel->stats->totalTicks << "]: Thread ["
+        << t->getID() << "] is inserted into queue L[" << level << "]");
+    pushlist->Append(t);
+}
+//------------------------------MP3----------------------------//
 
 //----------------------------------------------------------------------
 // Scheduler::ReadyToRun
@@ -57,7 +110,19 @@ void Scheduler::ReadyToRun(Thread *thread) {
     DEBUG(dbgThread, "Putting thread on ready list: " << thread->getName());
     // cout << "Putting thread on ready list: " << thread->getName() << endl ;
     thread->setStatus(READY);
-    readyList->Append(thread);
+    //readyList->Append(thread);
+
+    //---------------------------MP3-------------------------------//
+    int priority = thread->getPriority();
+    if (priority <= thread->MaxPriority[2]) {
+        pushQueue(thread, L3, 3);
+    } else if (priority <= thread->MaxPriority[1]) {
+        pushQueue(thread, L2, 2);
+    } else {
+        pushQueue(thread, L1, 1);
+    }
+    thread->setReadyTick((double)kernel->stats->totalTicks);
+    //---------------------------MP3-------------------------------//
 }
 
 //----------------------------------------------------------------------
@@ -72,11 +137,46 @@ Thread *
 Scheduler::FindNextToRun() {
     ASSERT(kernel->interrupt->getLevel() == IntOff);
 
-    if (readyList->IsEmpty()) {
+    /*if (readyList->IsEmpty()) {
         return NULL;
     } else {
         return readyList->RemoveFront();
-    }
+    }*/
+
+    //---------------------------MP3-------------------------------//
+    if (!L1->IsEmpty()) {
+        ListIterator<Thread*> iter(L1);
+        
+        Thread *minBurstThread = NULL;
+        for (minBurstThread=iter.Item(); !iter.IsDone(); iter.Next()) {
+            Thread *thread = iter.Item();
+            if (thread->getRemainingBurstTicks() < minBurstThread->getRemainingBurstTicks()) {
+                minBurstThread = thread;
+            } else if (thread->getRemainingBurstTicks() == minBurstThread->getRemainingBurstTicks()) {
+                if (thread->getID() < minBurstThread->getID()) minBurstThread = thread;
+            }
+        }
+        return popQueue(minBurstThread, L1, 1);
+
+    } else if (!L2->IsEmpty()) {
+        ListIterator<Thread*> iter(L2);
+        
+        Thread *maxPriorityThread = NULL;
+        for (maxPriorityThread=iter.Item(); !iter.IsDone(); iter.Next()) {
+            Thread *thread = iter.Item();
+            if (thread->getPriority() > maxPriorityThread->getPriority()) {
+                maxPriorityThread = thread;
+            } else if (thread->getPriority() == maxPriorityThread->getPriority()) {
+                if (thread->getID() < maxPriorityThread->getID()) maxPriorityThread = thread;
+            }
+        }
+        return popQueue(maxPriorityThread, L2, 2);
+
+    } else if (!L3->IsEmpty()) {
+        return popQueue(L3->Front(), L3, 3);
+
+    } else return NULL;
+    //---------------------------MP3-------------------------------//
 }
 
 //----------------------------------------------------------------------
@@ -124,7 +224,18 @@ void Scheduler::Run(Thread *nextThread, bool finishing) {
     // a bit to figure out what happens after this, both from the point
     // of view of the thread and from the perspective of the "outside world".
 
+    //---------------------------MP3-------------------------------//
+    nextThread->setStartRunningTick(kernel->stats->totalTicks);
+
+    DEBUG(dbgSche, "[E] Tick [" << kernel->stats->totalTicks << "]: Thread ["
+        << nextThread->getID() << "] is now selected for execution, thread ["
+        << oldThread->getID() << "] is replaced, and it has executed ["
+        << oldThread->getTotalBurstTicks() << "] ticks")
+    
     SWITCH(oldThread, nextThread);
+
+    oldThread->setStartRunningTick(kernel->stats->totalTicks);
+    //---------------------------MP3-------------------------------//
 
     // we're back, running oldThread
 
@@ -164,6 +275,14 @@ void Scheduler::CheckToBeDestroyed() {
 //	the ready list.  For debugging.
 //----------------------------------------------------------------------
 void Scheduler::Print() {
-    cout << "Ready list contents:\n";
-    readyList->Apply(ThreadPrint);
+    //cout << "Ready list contents:\n";
+    //readyList->Apply(ThreadPrint);
+
+    //MP3
+    cout << "L1 contents:\n";
+    L1->Apply(ThreadPrint);
+    cout << "L2 contents:\n";
+    L2->Apply(ThreadPrint);
+    cout << "L3 contents:\n";
+    L3->Apply(ThreadPrint);
 }

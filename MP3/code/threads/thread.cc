@@ -47,6 +47,17 @@ Thread::Thread(char *threadName, int threadID) {
                                  // of machine registers
     }
     space = NULL;
+
+    //---------------------------MP3-------------------------------//
+    for(int i = 0; i < 3; i++) MaxPriority[i] = 49 + (2-i)*50;
+    TQ = 100.0;
+    Priority = 0;
+    ApproximatedBurstTicks = 0.0;
+    TotalBurstTicks = 0.0;
+    StartRunningTick = 0.0;
+    RemainingBurstTicks = 0.0;
+    LastBurstTicks = 0.0;
+    //---------------------------MP3-------------------------------//
 }
 
 //----------------------------------------------------------------------
@@ -67,6 +78,53 @@ Thread::~Thread() {
     if (stack != NULL)
         DeallocBoundedArray((char *)stack, StackSize * sizeof(int));
 }
+
+//---------------------------MP3-------------------------------//
+int Thread::getLevel() {
+    ASSERT(Priority >= 0 && Priority <= MaxPriority[0]);
+    if(Priority <= MaxPriority[2]) return 3;
+    else if(Priority <= MaxPriority[1]) return 2;
+    else return 1;
+}
+
+void Thread::updateBurstTicks(bool ready) {
+    LastBurstTicks = (double)kernel->stats->totalTicks - StartRunningTick;
+    
+    if(ready) { //Running -> Ready
+        TotalBurstTicks += LastBurstTicks;
+        RemainingBurstTicks = max(0.0, ApproximatedBurstTicks - TotalBurstTicks);
+    }
+    else { //Running -> Waiting
+        TotalBurstTicks += LastBurstTicks;
+        double OldApproximateBT = ApproximatedBurstTicks;
+        ApproximatedBurstTicks = 0.5 * (TotalBurstTicks + OldApproximateBT);
+        DEBUG(dbgSche, "[D] Tick [" << kernel->stats->totalTicks << "]: Thread ["
+            << ID << "] update approximate burst time, from: [" << OldApproximateBT 
+            << "], add [" << TotalBurstTicks << "], to [" << ApproximatedBurstTicks << "]");
+        TotalBurstTicks = 0;
+        RemainingBurstTicks = ApproximatedBurstTicks;
+    }
+}
+
+void Thread::updatePriority() {
+    double AgeTicks = (double)kernel->stats->totalTicks - ReadyTick;
+
+    if(Priority != MaxPriority[0] && AgeTicks > 1500) {
+        
+        int OldPriority = Priority;
+        Priority = min(MaxPriority[0], Priority + 10);
+        DEBUG(dbgSche, "[C] Tick [" << kernel->stats->totalTicks << "]: Thread ["
+            << ID << "] changes its priority from [" << OldPriority << "] to [" << Priority << "]");
+        ReadyTick = (double)kernel->stats->totalTicks;
+    }
+}
+
+/*
+void Thread::updateAgeTick() {
+    TotalAgeTick += kernel->stats->totalTicks - StartAgeTick;
+}
+*/
+//---------------------------MP3-------------------------------//
 
 //----------------------------------------------------------------------
 // Thread::Fork
@@ -205,11 +263,16 @@ void Thread::Yield() {
 
     DEBUG(dbgThread, "Yielding thread: " << name);
 
+    //------------------------MP3-------------------------------//
+    updateBurstTicks(TRUE);
+    kernel->scheduler->ReadyToRun(this);
     nextThread = kernel->scheduler->FindNextToRun();
+    
     if (nextThread != NULL) {
-        kernel->scheduler->ReadyToRun(this);
         kernel->scheduler->Run(nextThread, FALSE);
     }
+    //------------------------MP3-------------------------------//
+
     (void)kernel->interrupt->SetLevel(oldLevel);
 }
 
@@ -243,6 +306,10 @@ void Thread::Sleep(bool finishing) {
     DEBUG(dbgTraCode, "In Thread::Sleep, Sleeping thread: " << name << ", " << kernel->stats->totalTicks);
 
     status = BLOCKED;
+
+    //MP3: Update burst ticks before context switch.
+    updateBurstTicks(FALSE);
+
     // cout << "debug Thread::Sleep " << name << "wait for Idle\n";
     while ((nextThread = kernel->scheduler->FindNextToRun()) == NULL) {
         kernel->interrupt->Idle();  // no one to run, wait for an interrupt

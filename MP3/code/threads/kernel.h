@@ -37,7 +37,7 @@ class Kernel {
                         // from constructor because
                         // refers to "kernel" as a global
     void ExecAll();
-    int Exec(char *name);
+    int Exec(char *name, int priority);
     void ThreadSelfTest();  // self test of threads and synchronization
 
     void ConsoleTest();  // interactive console self test
@@ -89,6 +89,9 @@ class Kernel {
 #ifndef FILESYS_STUB
     bool formatFlag;  // format the disk if this is true
 #endif
+
+    //------------------MP3-------------------//
+    int priorities[10];
 };
 
 #endif  // KERNEL_H

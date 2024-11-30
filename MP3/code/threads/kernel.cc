@@ -53,7 +53,20 @@ Kernel::Kernel(int argc, char **argv) {
             debugUserProg = TRUE;
         } else if (strcmp(argv[i], "-e") == 0) {
             execfile[++execfileNum] = argv[++i];
+            priorities[execfileNum] = 0; //MP3
             cout << execfile[execfileNum] << "\n";
+
+        //------------------MP3-------------------//
+        } else if (strcmp(argv[i], "-ep") == 0){
+            ASSERT(i + 2 < argc);
+            execfile[++execfileNum] = argv[++i];
+
+            int priority = atoi(argv[++i]);
+            ASSERT(priority>=0 && priority<=149)
+            priorities[execfileNum] = priority;
+            //cout << execfile[execfileNum] << ", " << priority << "\n";
+        //------------------MP3-------------------//
+        
         } else if (strcmp(argv[i], "-ee") == 0) {
             // Added by @dasbd72
             // To end the program after all the threads are done
@@ -118,8 +131,8 @@ void Kernel::Initialize() {
 #else
     fileSystem = new FileSystem(formatFlag);
 #endif  // FILESYS_STUB
-    postOfficeIn = new PostOfficeInput(10);
-    postOfficeOut = new PostOfficeOutput(reliability);
+    // postOfficeIn = new PostOfficeInput(10);
+    // postOfficeOut = new PostOfficeOutput(reliability);
 
     interrupt->Enable();
 }
@@ -139,8 +152,8 @@ Kernel::~Kernel() {
     delete synchConsoleOut;
     delete synchDisk;
     delete fileSystem;
-    delete postOfficeIn;
-    delete postOfficeOut;
+    // delete postOfficeIn;
+    // delete postOfficeOut;
 
     Exit(0);
 }
@@ -259,16 +272,19 @@ void ForkExecute(Thread *t) {
 
 void Kernel::ExecAll() {
     for (int i = 1; i <= execfileNum; i++) {
-        int a = Exec(execfile[i]);
+        int a = Exec(execfile[i], priorities[i]);
     }
     currentThread->Finish();
     // Kernel::Exec();
 }
 
-int Kernel::Exec(char *name) {
+int Kernel::Exec(char *name, int priority) {
     t[threadNum] = new Thread(name, threadNum);
     t[threadNum]->setIsExec();
     t[threadNum]->space = new AddrSpace();
+    //---------------------------MP3-------------------------------//
+    t[threadNum]->setPriority(priority);
+    //---------------------------MP3-------------------------------//
     t[threadNum]->Fork((VoidFunctionPtr)&ForkExecute, (void *)t[threadNum]);
     threadNum++;
 

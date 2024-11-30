@@ -110,6 +110,22 @@ class Thread {
     void Print() { cout << name; }
     void SelfTest();  // test whether thread impl is working
 
+    //---------------------------MP3-------------------------------//
+    int MaxPriority[3]; //L3 = Max[2] = 49, L2 = 99, L1 = 149
+    void setPriority(int priority) { Priority = priority; }
+    int getPriority() { return Priority; }
+    int getLevel();
+    double getRemainingBurstTicks() { return RemainingBurstTicks; }
+    void updateBurstTicks(bool ready);
+    void updatePriority();
+    void setStartRunningTick(double tick) { StartRunningTick = tick; }
+    double getStartRunningTick() { return StartRunningTick; }
+    void setReadyTick(double tick) { ReadyTick = tick; }
+    double getLastBurstTicks() { return LastBurstTicks; }
+    double getTQ() { return TQ; }
+    double getTotalBurstTicks() { return TotalBurstTicks; }
+    //---------------------------MP3-------------------------------//
+
    private:
     // some of the private data for this class is listed above
 
@@ -129,6 +145,17 @@ class Thread {
     // while executing kernel code.
 
     int userRegisters[NumTotalRegs];  // user-level CPU register state
+
+    // ---------------------------MP3-------------------------------//
+    double TQ; // time quantum = 100
+    int Priority;
+    double ReadyTick; // The moment when the thread enters ready queue.
+    double ApproximatedBurstTicks;
+    double TotalBurstTicks;
+    double StartRunningTick;
+    double RemainingBurstTicks;
+    double LastBurstTicks;
+    //---------------------------MP3--------------------------------//
 
    public:
     void SaveUserState();     // save user-level register state
