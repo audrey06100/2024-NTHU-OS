@@ -121,9 +121,9 @@ class Thread {
     void setStartRunningTick(double tick) { StartRunningTick = tick; }
     double getStartRunningTick() { return StartRunningTick; }
     void setReadyTick(double tick) { ReadyTick = tick; }
-    double getLastBurstTicks() { return LastBurstTicks; }
     double getTQ() { return TQ; }
     double getTotalBurstTicks() { return TotalBurstTicks; }
+    double setTotalBurstTicks(double tick) { TotalBurstTicks = tick; }
     //---------------------------MP3-------------------------------//
 
    private:

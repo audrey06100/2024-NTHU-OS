@@ -196,7 +196,7 @@ Scheduler::FindNextToRun() {
 //		(when the next thread starts running)
 //----------------------------------------------------------------------
 
-void Scheduler::Run(Thread *nextThread, bool finishing) {
+void Scheduler::Run(Thread *nextThread, bool finishing, bool ready) {
     Thread *oldThread = kernel->currentThread;
 
     ASSERT(kernel->interrupt->getLevel() == IntOff);
@@ -225,13 +225,16 @@ void Scheduler::Run(Thread *nextThread, bool finishing) {
     // of view of the thread and from the perspective of the "outside world".
 
     //---------------------------MP3-------------------------------//
-    nextThread->setStartRunningTick(kernel->stats->totalTicks);
 
     DEBUG(dbgSche, "[E] Tick [" << kernel->stats->totalTicks << "]: Thread ["
         << nextThread->getID() << "] is now selected for execution, thread ["
         << oldThread->getID() << "] is replaced, and it has executed ["
         << oldThread->getTotalBurstTicks() << "] ticks")
     
+    if (!ready) oldThread->setTotalBurstTicks(0);
+
+    nextThread->setStartRunningTick(kernel->stats->totalTicks);
+
     SWITCH(oldThread, nextThread);
 
     oldThread->setStartRunningTick(kernel->stats->totalTicks);

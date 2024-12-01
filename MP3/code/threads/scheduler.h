@@ -26,7 +26,7 @@ class Scheduler {
     // Thread can be dispatched.
     Thread* FindNextToRun();  // Dequeue first thread on the ready
                               // list, if any, and return thread.
-    void Run(Thread* nextThread, bool finishing);
+    void Run(Thread* nextThread, bool finishing, bool ready);
     // Cause nextThread to start running
     void CheckToBeDestroyed();  // Check if thread that had been
                                 // running needs to be deleted

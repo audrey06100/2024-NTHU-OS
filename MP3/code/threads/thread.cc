@@ -101,7 +101,6 @@ void Thread::updateBurstTicks(bool ready) {
         DEBUG(dbgSche, "[D] Tick [" << kernel->stats->totalTicks << "]: Thread ["
             << ID << "] update approximate burst time, from: [" << OldApproximateBT 
             << "], add [" << TotalBurstTicks << "], to [" << ApproximatedBurstTicks << "]");
-        TotalBurstTicks = 0;
         RemainingBurstTicks = ApproximatedBurstTicks;
     }
 }
@@ -269,7 +268,7 @@ void Thread::Yield() {
     nextThread = kernel->scheduler->FindNextToRun();
     
     if (nextThread != NULL) {
-        kernel->scheduler->Run(nextThread, FALSE);
+        kernel->scheduler->Run(nextThread, FALSE, TRUE);
     }
     //------------------------MP3-------------------------------//
 
@@ -315,7 +314,7 @@ void Thread::Sleep(bool finishing) {
         kernel->interrupt->Idle();  // no one to run, wait for an interrupt
     }
     // returns when it's time for us to run
-    kernel->scheduler->Run(nextThread, finishing);
+    kernel->scheduler->Run(nextThread, finishing, FALSE);
 }
 
 //----------------------------------------------------------------------
